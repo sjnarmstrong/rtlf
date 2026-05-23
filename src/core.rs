@@ -2,23 +2,23 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use polars_core::error::PolarsResult;
-use polars_core::frame::{DataFrame, Schema};
+use polars_core::frame::DataFrame;
+use polars_core::datatypes::DataType;
+use polars_core::schema::{Schema, SchemaExt};
+use polars_core::prelude::Column;
 use polars_expr::state::ExecutionState;
-use polars_lazy::frame::LazyFrame;
+use polars_lazy::frame::{IntoLazy, LazyFrame};
 use polars_mem_engine::create_physical_plan;
-use polars_plan::plans::{IR, IRPlan};
+use polars_plan::plans::{ArenaLpIter, IR, IRPlan};
 use polars_utils::arena::Node;
 
-
-const PLACEHOLDER_TOKEN: &str = "_rtlf::placeholder";
+const PLACEHOLDER_MARKER: &str = "__rtlf_placeholder__";
 
 fn placeholder_name_from_ir(ir: &IR) -> Option<String> {
-    if let IR::Scan { sources, .. } = ir {
-        let paths = sources.as_paths()?;
-        if paths.len() != 2 || paths[0].as_str() != PLACEHOLDER_TOKEN {
-            return None;
-        }
-        Some(paths[1].as_str().to_owned())
+    if let IR::DataFrameScan { schema, .. } = ir {
+        schema.iter_names().find_map(|name| {
+            name.as_str().strip_prefix(PLACEHOLDER_MARKER).map(String::from)
+        })
     } else {
         None
     }
@@ -54,7 +54,7 @@ impl RealtimeLazyFrame {
                     inputs.keys().collect::<Vec<_>>()
                 )
             })?;
-            let schema = df.schema();
+            let schema = df.schema().clone();
             *lp_arena.get_mut(Node(node_idx)) = IR::DataFrameScan {
                 df: Arc::new(df.clone()),
                 schema,
@@ -66,28 +66,15 @@ impl RealtimeLazyFrame {
         physical.execute(&mut ExecutionState::new())
     }
 
-    pub fn read_placeholder(
-        name: String, schema: &Schema
-    ) -> PolarsResult<LazyFrame> {
-        let sources = ScanSources::Paths(Buffer::from_iter([
-            PlRefPath::new(PLACEHOLDER_TOKEN),
-            PlRefPath::new(name.as_str()),
-        ]));
-
-        let scan = DslPlan::Scan {
-            sources,
-            scan_type: Box::new(FileScanDsl::Parquet {
-                options: ParquetOptions {
-                    schema: Some(schema),
-                    ..Default::default(),
-                }
-            }),
-            unified_scan_args: Box::new(UnifiedScanArgs {
-                glob: false,
-                ..Default::default(),
-            }),
-            cached_ir: Default::default()
-        };
-        LazyFrame::from(scan)
+    pub fn read_placeholder(name: &str, schema: &Schema) -> LazyFrame {
+        let marker_name = format!("{}{}", PLACEHOLDER_MARKER, name);
+        // Build columns: marker (Null typed) + user's columns
+        let mut columns: Vec<Column> = Vec::with_capacity(schema.len() + 1);
+        columns.push(Column::new_empty(marker_name.as_str().into(), &DataType::Null));
+        for field in schema.iter_fields() {
+            columns.push(Column::new_empty(field.name.clone(), &field.dtype));
+        }
+        let df = DataFrame::new(columns).expect("placeholder DataFrame construction failed");
+        df.lazy()
     }
 }

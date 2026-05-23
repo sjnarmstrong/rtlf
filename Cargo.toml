@@ -8,15 +8,16 @@ name = "rtlf"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.21", features = ["extension-module"] }
-pyo3-polars = { version = "0.14", features = ["derive"] }
-polars = { version = "0.46", features = ["lazy"] }
-polars-core = "0.46"
-polars-plan = { version = "0.46", features = ["serde"] }
-polars-expr = "0.46"
-polars-mem-engine = "0.46"
-polars-utils = "0.46"
-polars-lazy = "0.46"
+pyo3 = { version = "0.28", features = ["extension-module"] }
+pyo3-polars = { version = "0.26", features = ["lazy", "derive"] }
+
+polars-core = { version = "0.53", default-features=false, features = ["dtype-struct"] }
+polars-plan = { version = "0.53", features = ["serde"] }
+polars-expr = { version = "0.53", default-features=false }
+polars-mem-engine = { version = "0.53", default-features=false }
+polars-utils = { version = "0.53", default-features=false }
+polars-lazy = { version = "0.53", default-features=false, features = ["cse", "parquet"] }
+polars-ffi = { version = "0.53", default-features = false }
 
 [profile.release]
 codegen-units = 1

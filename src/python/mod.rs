@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use polars_core::datatypes::Field;
 use polars_core::frame::DataFrame;
@@ -39,9 +38,7 @@ impl PyRealtimeLazyFrame {
     #[staticmethod]
     fn read_placeholder(name: String, schema: &Bound<'_, PyAny>) -> PyResult<PyLazyFrame> {
         let schema = extract_schema(schema)?;
-        RealtimeLazyFrame::read_placeholder(name, &schema)
-            .map(PyLazyFrame)
-            .map_err(PyRtlfErr::from)
+        Ok(PyLazyFrame(RealtimeLazyFrame::read_placeholder(&name, &schema)))
     }
 
     fn collect(&self, py: Python<'_>, inputs: HashMap<String, PyDataFrame>) -> PyResult<PyDataFrame> {
@@ -50,11 +47,11 @@ impl PyRealtimeLazyFrame {
             .map(|(k, v)| (k, v.0))
             .collect();
 
-        py.allow_threads(|| {
+        py.detach(|| {
             self.inner
                 .collect(rust_inputs)
                 .map(PyDataFrame)
-                .map_err(PyRtlfErr::from)
+                .map_err(|e| pyo3::PyErr::from(PyRtlfErr::from(e)))
         })
     }
 }
