@@ -20,27 +20,27 @@ polars-lazy = { version = "0.52", default-features=false, features = ["cse", "pa
 polars-ffi = { version = "0.52", default-features = false }
 
 [patch.crates-io]
-polars = { path = "../submodules/polars/crates/polars" }
-polars-arrow = { path = "../submodules/polars/crates/polars-arrow" }
-polars-buffer = { path = "../submodules/polars/crates/polars-buffer" }
-polars-compute = { path = "../submodules/polars/crates/polars-compute" }
-polars-core = { path = "../submodules/polars/crates/polars-core" }
-polars-dtype = { path = "../submodules/polars/crates/polars-dtype" }
-polars-error = { path = "../submodules/polars/crates/polars-error" }
-polars-expr = { path = "../submodules/polars/crates/polars-expr" }
-polars-ffi = { path = "../submodules/polars/crates/polars-ffi" }
-polars-io = { path = "../submodules/polars/crates/polars-io" }
-polars-lazy = { path = "../submodules/polars/crates/polars-lazy" }
-polars-mem-engine = { path = "../submodules/polars/crates/polars-mem-engine" }
-polars-ops = { path = "../submodules/polars/crates/polars-ops" }
-polars-parquet = { path = "../submodules/polars/crates/polars-parquet" }
-polars-plan = { path = "../submodules/polars/crates/polars-plan" }
-polars-row = { path = "../submodules/polars/crates/polars-row" }
-polars-schema = { path = "../submodules/polars/crates/polars-schema" }
-polars-stream = { path = "../submodules/polars/crates/polars-stream" }
-polars-time = { path = "../submodules/polars/crates/polars-time" }
-polars-utils = { path = "../submodules/polars/crates/polars-utils" }
-pyo3-polars = { path = "../submodules/polars/pyo3-polars/pyo3-polars" }
+polars = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-arrow = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-buffer = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-compute = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-core = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-dtype = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-error = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-expr = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-ffi = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-io = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-lazy = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-mem-engine = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-ops = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-parquet = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-plan = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-row = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-schema = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-stream = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-time = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+polars-utils = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
+pyo3-polars = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }
 
 [profile.release]
 codegen-units = 1

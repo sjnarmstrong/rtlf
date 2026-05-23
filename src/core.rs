@@ -12,6 +12,9 @@ use polars_mem_engine::create_physical_plan;
 use polars_plan::plans::{ArenaLpIter, IR, IRPlan};
 use polars_utils::arena::Node;
 
+
+// We make use of DataFrame scan operations with specific names as placeholders
+// we then substatute them out before creating the physical plan
 const PLACEHOLDER_MARKER: &str = "__rtlf_placeholder__";
 
 fn placeholder_name_from_ir(ir: &IR) -> Option<String> {
