@@ -1,0 +1,24 @@
+[package]
+name = "rtlf"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "rtlf"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.21", features = ["extension-module"] }
+pyo3-polars = { version = "0.14", features = ["derive"] }
+polars = { version = "0.46", features = ["lazy"] }
+polars-core = "0.46"
+polars-plan = { version = "0.46", features = ["serde"] }
+polars-expr = "0.46"
+polars-mem-engine = "0.46"
+polars-utils = "0.46"
+polars-lazy = "0.46"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+strip = true
