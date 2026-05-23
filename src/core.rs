@@ -74,7 +74,7 @@ impl RealtimeLazyFrame {
         for field in schema.iter_fields() {
             columns.push(Column::new_empty(field.name.clone(), &field.dtype));
         }
-        let df = DataFrame::new(columns).expect("placeholder DataFrame construction failed");
+        let df = DataFrame::new(0, columns).expect("placeholder DataFrame construction failed");
         df.lazy()
     }
 }

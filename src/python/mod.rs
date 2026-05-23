@@ -12,7 +12,7 @@ use crate::core::RealtimeLazyFrame;
 use crate::error::PyRtlfErr;
 
 fn extract_schema(ob: &Bound<'_, PyAny>) -> PyResult<Schema> {
-    let dict = ob.downcast::<PyDict>()?;
+    let dict = ob.cast::<PyDict>()?;
     dict.iter()
         .map(|(k, v)| {
             let name = k.extract::<PyBackedStr>()?;

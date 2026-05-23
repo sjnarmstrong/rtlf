@@ -8,16 +8,39 @@ name = "rtlf"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.28", features = ["extension-module"] }
-pyo3-polars = { version = "0.26", features = ["lazy", "derive"] }
+pyo3 = { version = "0.27", features = ["extension-module"] }
+pyo3-polars = { version = "0.25", features = ["lazy", "derive"] }
 
-polars-core = { version = "0.53", default-features=false, features = ["dtype-struct"] }
-polars-plan = { version = "0.53", features = ["serde"] }
-polars-expr = { version = "0.53", default-features=false }
-polars-mem-engine = { version = "0.53", default-features=false }
-polars-utils = { version = "0.53", default-features=false }
-polars-lazy = { version = "0.53", default-features=false, features = ["cse", "parquet"] }
-polars-ffi = { version = "0.53", default-features = false }
+polars-core = { version = "0.52", default-features=false, features = ["dtype-struct"] }
+polars-plan = { version = "0.52", features = ["serde", "dtype-struct"] }
+polars-expr = { version = "0.52", default-features=false, features = ["dtype-struct"] }
+polars-mem-engine = { version = "0.52", default-features=false }
+polars-utils = { version = "0.52", default-features=false }
+polars-lazy = { version = "0.52", default-features=false, features = ["cse", "parquet"] }
+polars-ffi = { version = "0.52", default-features = false }
+
+[patch.crates-io]
+polars = { path = "../submodules/polars/crates/polars" }
+polars-arrow = { path = "../submodules/polars/crates/polars-arrow" }
+polars-buffer = { path = "../submodules/polars/crates/polars-buffer" }
+polars-compute = { path = "../submodules/polars/crates/polars-compute" }
+polars-core = { path = "../submodules/polars/crates/polars-core" }
+polars-dtype = { path = "../submodules/polars/crates/polars-dtype" }
+polars-error = { path = "../submodules/polars/crates/polars-error" }
+polars-expr = { path = "../submodules/polars/crates/polars-expr" }
+polars-ffi = { path = "../submodules/polars/crates/polars-ffi" }
+polars-io = { path = "../submodules/polars/crates/polars-io" }
+polars-lazy = { path = "../submodules/polars/crates/polars-lazy" }
+polars-mem-engine = { path = "../submodules/polars/crates/polars-mem-engine" }
+polars-ops = { path = "../submodules/polars/crates/polars-ops" }
+polars-parquet = { path = "../submodules/polars/crates/polars-parquet" }
+polars-plan = { path = "../submodules/polars/crates/polars-plan" }
+polars-row = { path = "../submodules/polars/crates/polars-row" }
+polars-schema = { path = "../submodules/polars/crates/polars-schema" }
+polars-stream = { path = "../submodules/polars/crates/polars-stream" }
+polars-time = { path = "../submodules/polars/crates/polars-time" }
+polars-utils = { path = "../submodules/polars/crates/polars-utils" }
+pyo3-polars = { path = "../submodules/polars/pyo3-polars/pyo3-polars" }
 
 [profile.release]
 codegen-units = 1
