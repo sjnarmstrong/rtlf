@@ -13,29 +13,37 @@ use polars_plan::dsl::{DslPlan, FileScanDsl, FileScanIR, ScanSources, UnifiedSca
 use polars_plan::plans::{AExpr, FileInfo, IR};
 use polars_utils::arena::{Arena, Node};
 use polars_utils::pl_path::PlRefPath;
-use polars_utils::unique_id::UniqueId;
 
 const PLACEHOLDER_TOKEN: &str = "_rtlf::placeholder";
 
-// ── Thread-local: populated by placeholder_builder during create_physical_plan, ──
-// ── harvested by new() immediately after.                                        ──
+// Each placeholder owns an Arc<Mutex<Option<DataFrame>>> that is shared between
+// the PlaceholderExec (which reads it) and RealtimeLazyFrame (which writes it).
+// DataFrame moves in on collect(), moves out on execute() — no clone anywhere.
+type Slot = Arc<Mutex<Option<DataFrame>>>;
+
 thread_local! {
-    static PLACEHOLDER_REGISTRY: RefCell<Option<HashMap<String, UniqueId>>> =
+    static PLACEHOLDER_REGISTRY: RefCell<Option<HashMap<String, Slot>>> =
         const { RefCell::new(None) };
 }
 
-// ── Executor that reads a pre-populated DataFrame from the ExecutionState cache ──
 struct PlaceholderExec {
-    id: UniqueId,
+    slot: Slot,
 }
 
 impl Executor for PlaceholderExec {
-    fn execute(&mut self, state: &mut ExecutionState) -> PolarsResult<DataFrame> {
-        Ok(state.get_df_cache(&self.id))
+    fn execute(&mut self, _state: &mut ExecutionState) -> PolarsResult<DataFrame> {
+        self.slot
+            .lock()
+            .expect("placeholder slot poisoned")
+            .take()
+            .ok_or_else(|| {
+                polars_core::error::polars_err!(
+                    ComputeError: "placeholder slot empty — collect() was not called before execute()"
+                )
+            })
     }
 }
 
-// ── StreamingExecutorBuilder (bare fn pointer) that intercepts placeholder scans ──
 fn placeholder_builder(
     node: Node,
     lp_arena: &mut Arena<IR>,
@@ -43,14 +51,14 @@ fn placeholder_builder(
 ) -> PolarsResult<Box<dyn Executor>> {
     let ir = lp_arena.get(node);
     if let Some(name) = placeholder_name_from_ir(ir) {
-        let id = UniqueId::new();
+        let slot: Slot = Arc::new(Mutex::new(None));
         PLACEHOLDER_REGISTRY.with(|r| {
             r.borrow_mut()
                 .as_mut()
                 .expect("placeholder_builder called outside of RealtimeLazyFrame::new")
-                .insert(name, id);
+                .insert(name, slot.clone());
         });
-        return Ok(Box::new(PlaceholderExec { id }));
+        return Ok(Box::new(PlaceholderExec { slot }));
     }
     polars_core::error::polars_bail!(
         ComputeError: "non-placeholder file scan in RealtimeLazyFrame; \
@@ -71,14 +79,13 @@ fn placeholder_name_from_ir(ir: &IR) -> Option<String> {
 }
 
 pub struct RealtimeLazyFrame {
-    // Compiled once in new(). Mutex because Executor::execute takes &mut self.
-    // Concurrent callers will be serialised; for true parallelism, create
-    // one RealtimeLazyFrame per thread.
+    // Mutex because Executor::execute takes &mut self. Concurrent callers are
+    // serialised; for true parallelism create one RealtimeLazyFrame per thread.
     physical_plan: Mutex<Box<dyn Executor>>,
-    placeholders: HashMap<String, UniqueId>,
+    placeholder_slots: HashMap<String, Slot>,
 }
 
-// Arena<IR/AExpr> are Send; UniqueId and DataFrame are Send.
+// Slot is Arc<Mutex<...>> which is Send+Sync; DataFrame is Send.
 unsafe impl Send for RealtimeLazyFrame {}
 unsafe impl Sync for RealtimeLazyFrame {}
 
@@ -86,7 +93,6 @@ impl RealtimeLazyFrame {
     pub fn new(lf: LazyFrame) -> PolarsResult<Self> {
         let mut ir_plan = lf.to_alp_optimized()?;
 
-        // Activate registry so placeholder_builder can write into it.
         PLACEHOLDER_REGISTRY.with(|r| *r.borrow_mut() = Some(HashMap::new()));
 
         let physical_plan = create_physical_plan(
@@ -96,18 +102,18 @@ impl RealtimeLazyFrame {
             Some(placeholder_builder as StreamingExecutorBuilder),
         )?;
 
-        let placeholders = PLACEHOLDER_REGISTRY
+        let placeholder_slots = PLACEHOLDER_REGISTRY
             .with(|r| r.borrow_mut().take())
             .unwrap_or_default();
 
         Ok(Self {
             physical_plan: Mutex::new(physical_plan),
-            placeholders,
+            placeholder_slots,
         })
     }
 
-    pub fn collect(&self, inputs: HashMap<String, DataFrame>) -> PolarsResult<DataFrame> {
-        for name in self.placeholders.keys() {
+    pub fn collect(&self, mut inputs: HashMap<String, DataFrame>) -> PolarsResult<DataFrame> {
+        for name in self.placeholder_slots.keys() {
             if !inputs.contains_key(name) {
                 polars_core::error::polars_bail!(
                     ComputeError: "placeholder '{}' not provided; got: {:?}",
@@ -117,16 +123,16 @@ impl RealtimeLazyFrame {
             }
         }
 
-        let mut state = ExecutionState::new();
-        for (name, id) in &self.placeholders {
-            // hit_count = 1: each placeholder is used exactly once per collect.
-            state.set_df_cache(id, inputs[name].clone(), 1);
+        // Lock the plan first so concurrent collect() calls are serialised while
+        // we fill the slots. The slots are only valid between the fill and execute.
+        let mut plan = self.physical_plan.lock().expect("executor mutex poisoned");
+
+        for (name, slot) in &self.placeholder_slots {
+            // remove() moves the DataFrame into the slot — no clone, no Arc increment.
+            *slot.lock().expect("placeholder slot poisoned") = inputs.remove(name);
         }
 
-        self.physical_plan
-            .lock()
-            .expect("executor mutex poisoned")
-            .execute(&mut state)
+        plan.execute(&mut ExecutionState::new())
     }
 
     /// Build a placeholder LazyFrame. Use inside the query passed to `new()`.
@@ -141,7 +147,6 @@ impl RealtimeLazyFrame {
             PlRefPath::new(name),
         ]));
 
-        // Build the IR::Scan directly so the DSL→IR conversion never opens the path.
         let file_info = FileInfo {
             schema: schema_ref.clone(),
             reader_schema: None,
