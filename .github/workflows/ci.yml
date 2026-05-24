@@ -24,9 +24,11 @@ jobs:
         with:
           python-version: '3.12'
 
-      - run: pip install maturin pytest "polars==1.38.1"
+      - run: pip install maturin "polars==1.38.1"
 
-      - run: maturin develop --release
+      - run: maturin build --release --out dist/
+
+      - run: pip install --find-links dist/ rtlf pytest
 
       - run: pytest tests/ -v
 
@@ -73,7 +75,7 @@ jobs:
     name: Publish to PyPI
     needs: build
     runs-on: ubuntu-latest
-    environment: pypi
+    environment: pipy
     permissions:
       id-token: write  # required for OIDC trusted publishing
     steps:
