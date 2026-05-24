@@ -33,24 +33,51 @@ for batch in stream:
     result = rtlf.collect({"input": batch})
 ```
 
-## Benchmark
+## Benchmarks
 
-Decision tree expressions with width=5 (each node branches 5 ways), batch size=10 rows.
-The speedup grows with plan depth because optimizer overhead scales with plan size while execution cost is roughly constant relative to the baseline.
+All benchmarks use batch size=1000 rows, 10 timed runs per depth point. Results show mean time and speedup relative to `LazyFrame.collect()`.
+
+### Linear chain
+
+A chain of stacked `pl.when(...).then(...).otherwise(...)` calls — depth is the number of nodes. This is the typical structure of a scoring function or feature pipeline.
 
 ```
-depth  lf ms/iter  rtlf ms/iter   speedup
-------------------------------------------
-    1       1.034         1.009      1.03x
-    2       5.642         4.648      1.21x
-    3      23.059        17.777      1.30x
-    4      70.304        33.631      2.09x
-    5     369.320       104.448      3.54x
-    6    2606.266       682.040      3.82x
-    7   18080.420      4237.845      4.27x
+depth_range    lf_ms     rtlf_ms  compiled_ms  rtlf_speedup  compiled_speedup
+-------------------------------------------------------------------------------
+1–9             1.24        1.25         0.95          0.99x             1.31x
+10–99          12.93        9.57         5.78          1.35x             2.24x
+100–999       502.97      216.92        21.52          2.32x            23.37x
+1000          1545.78      670.64        38.64          2.30x            40.00x
 ```
 
-At depth 5+ the optimizer is doing most of the work — `rtlf` eliminates it entirely, giving 3.5–4.3x throughput improvement on the same hardware.
+At 100+ nodes, `CompiledRealtimeLazyFrame` is **23–40x faster** than plain `LazyFrame`. The optimizer cost grows super-linearly with plan depth; `rtlf` eliminates it entirely. Even the uncompiled `rtlf` gives 2.3x at scale.
+
+### Decision tree
+
+Width-5 branching tree (each depth level fans out 5 ways), so node count is exponential in depth.
+
+```
+depth     lf ms    rtlf ms  compiled ms  rtlf speedup  compiled speedup
+------------------------------------------------------------------------
+    1      1.10       1.07         1.04          1.03x             1.06x
+    2      6.01       5.29         3.65          1.14x             1.65x
+    3     26.03      18.84        14.29          1.38x             1.82x
+    4     73.72      44.32        19.91          1.66x             3.70x
+    5    388.34     116.52        14.52          3.33x            26.75x
+    6   2817.79     718.58        49.76          3.92x            56.62x
+```
+
+Even at shallow depth the exponential node count makes optimizer overhead dominate. By depth 6, `CompiledRealtimeLazyFrame` is **56x faster** than plain `LazyFrame`.
+
+### Running the benchmarks
+
+```bash
+uv sync
+uv run maturin develop --release
+source .venv/bin/activate
+python benchmark.py
+# outputs: benchmark.png, benchmark_linear.parquet, benchmark_tree.parquet
+```
 
 ## Building
 
@@ -62,13 +89,6 @@ Requires:
 cd rtlf
 uv sync
 uv run maturin develop --release
-```
-
-Run the benchmark from the project root:
-
-```bash
-source rtlf/.venv/bin/activate
-python benchmark.py
 ```
 
 ## Implementation notes

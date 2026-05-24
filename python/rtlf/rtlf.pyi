@@ -1,9 +1,0 @@
-import polars as pl
-
-class PyRealtimeLazyFrame:
-    def __init__(self, lf: pl.LazyFrame) -> None: ...
-
-    @staticmethod
-    def read_placeholder(name: str, schema: pl.Schema) -> pl.LazyFrame: ...
-
-    def collect(self, inputs: dict[str, pl.DataFrame]) -> pl.DataFrame: ...

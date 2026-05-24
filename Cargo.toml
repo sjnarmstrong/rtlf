@@ -1,6 +1,6 @@
 [package]
 name = "rtlf"
-version = "0.0.0"
+version = "0.0.1"
 edition = "2021"
 
 [lib]
@@ -18,7 +18,7 @@ polars-plan = { version = "0.52", features = ["serde", "dtype-struct"] }
 polars-expr = { version = "0.52", default-features=false, features = ["dtype-struct"] }
 polars-mem-engine = { version = "0.52", default-features=false }
 polars-utils = { version = "0.52", default-features=false }
-polars-lazy = { version = "0.52", default-features=false, features = ["cse", "parquet"] }
+polars-lazy = { version = "0.52", default-features=false, features = ["cse", "parquet", "new_streaming"] }
 polars-ffi = { version = "0.52", default-features = false }
 
 [patch.crates-io]

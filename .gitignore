@@ -16,3 +16,7 @@ wheels/
 # Compiled extension modules
 *.so
 *.pyd
+
+*.parquet
+
+.pytest_cache/

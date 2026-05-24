@@ -1,3 +1,3 @@
-from rtlf.rtlf import PyRealtimeLazyFrame
+from rtlf._rtlf import PyCompiledRealtimeLazyFrame, PyRealtimeLazyFrame
 
-__all__ = ["PyRealtimeLazyFrame"]
+__all__ = ["PyRealtimeLazyFrame", "PyCompiledRealtimeLazyFrame"]

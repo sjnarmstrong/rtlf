@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "rtlf"
-version = "0.0.0"
+version = "0.0.1"
 description = "Polars extension in Rust"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -16,8 +16,11 @@ dependencies = [
 # The Rust extension module is placed inside the Python package directory.
 # Python source lives under python/ so maturin knows where to find it.
 python-source = "python"
-module-name = "rtlf.rtlf"
+module-name = "rtlf._rtlf"
 features = ["pyo3/extension-module"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [dependency-groups]
 dev = [

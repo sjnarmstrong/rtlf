@@ -8,8 +8,9 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3_polars::{PyDataFrame, PyDataType, PyLazyFrame};
 
-use crate::core::RealtimeLazyFrame;
+use crate::compiled::CompiledRealtimeLazyFrame;
 use crate::error::PyRtlfErr;
+use crate::realtime::RealtimeLazyFrame;
 
 fn extract_schema(ob: &Bound<'_, PyAny>) -> PyResult<Schema> {
     let dict = ob.cast::<PyDict>()?;
@@ -21,6 +22,12 @@ fn extract_schema(ob: &Bound<'_, PyAny>) -> PyResult<Schema> {
         })
         .collect::<PyResult<Schema>>()
 }
+
+fn unwrap_inputs(inputs: HashMap<String, PyDataFrame>) -> HashMap<String, DataFrame> {
+    inputs.into_iter().map(|(k, v)| (k, v.0)).collect()
+}
+
+// ── RealtimeLazyFrame ────────────────────────────────────────────────────────
 
 #[pyclass]
 pub struct PyRealtimeLazyFrame {
@@ -41,12 +48,39 @@ impl PyRealtimeLazyFrame {
         Ok(PyLazyFrame(RealtimeLazyFrame::read_placeholder(&name, &schema)))
     }
 
-    fn collect(&self, py: Python<'_>, inputs: HashMap<String, PyDataFrame>) -> PyResult<PyDataFrame> {
-        let rust_inputs: HashMap<String, DataFrame> = inputs
-            .into_iter()
-            .map(|(k, v)| (k, v.0))
-            .collect();
+    /// Compile the stored IR plan into a `CompiledRealtimeLazyFrame`.
+    /// The compilation clones the arenas so this instance remains usable.
+    fn compile(&self) -> PyResult<PyCompiledRealtimeLazyFrame> {
+        self.inner
+            .compile()
+            .map(|inner| PyCompiledRealtimeLazyFrame { inner })
+            .map_err(|e| pyo3::PyErr::from(PyRtlfErr::from(e)))
+    }
 
+    /// Collect by re-compiling the physical plan on every call.
+    fn collect(&self, py: Python<'_>, inputs: HashMap<String, PyDataFrame>) -> PyResult<PyDataFrame> {
+        let rust_inputs = unwrap_inputs(inputs);
+        py.detach(|| {
+            self.inner
+                .collect(rust_inputs)
+                .map(PyDataFrame)
+                .map_err(|e| pyo3::PyErr::from(PyRtlfErr::from(e)))
+        })
+    }
+}
+
+// ── CompiledRealtimeLazyFrame ────────────────────────────────────────────────
+
+#[pyclass]
+pub struct PyCompiledRealtimeLazyFrame {
+    inner: CompiledRealtimeLazyFrame,
+}
+
+#[pymethods]
+impl PyCompiledRealtimeLazyFrame {
+    /// Collect using pre-compiled physical plan with zero-copy slot injection.
+    fn collect(&self, py: Python<'_>, inputs: HashMap<String, PyDataFrame>) -> PyResult<PyDataFrame> {
+        let rust_inputs = unwrap_inputs(inputs);
         py.detach(|| {
             self.inner
                 .collect(rust_inputs)
