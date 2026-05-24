@@ -7,7 +7,7 @@ mod python;
 mod realtime;
 
 #[pymodule]
-fn rtlf(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _rtlf(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<python::PyRealtimeLazyFrame>()?;
     m.add_class::<python::PyCompiledRealtimeLazyFrame>()?;
     Ok(())

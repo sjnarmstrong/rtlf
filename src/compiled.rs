@@ -5,15 +5,18 @@ use polars_core::error::PolarsResult;
 use polars_core::frame::DataFrame;
 use polars_expr::state::ExecutionState;
 use polars_mem_engine::{Executor, StreamingExecutorBuilder, create_physical_plan};
-use polars_plan::plans::AExpr;
-use polars_plan::plans::IR;
+use polars_plan::plans::{AExpr, ArenaLpIter as _, IR};
 use polars_utils::arena::{Arena, Node};
 
-use crate::executor::{Slot, placeholder_builder, PLACEHOLDER_REGISTRY};
+use crate::executor::{Slot, placeholder_builder, placeholder_name_from_ir, PLACEHOLDER_REGISTRY};
 
 /// A physical plan compiled once from a `RealtimeLazyFrame`. Each `collect()`
 /// call injects DataFrames directly into executor slots — no plan recompilation,
 /// no clone, no `ExecutionState` cache overhead.
+///
+/// Limitation: queries whose streaming executors carry state between runs
+/// (e.g. `concat`/`union`) cannot be re-executed; use `RealtimeLazyFrame` for
+/// those.
 pub struct CompiledRealtimeLazyFrame {
     /// Mutex because `Executor::execute` takes `&mut self`. Concurrent callers
     /// are serialised; for true parallelism create one instance per thread.
@@ -21,7 +24,6 @@ pub struct CompiledRealtimeLazyFrame {
     placeholder_slots: HashMap<String, Slot>,
 }
 
-// Slot is Arc<Mutex<...>> which is Send+Sync; DataFrame and Executor are Send.
 unsafe impl Send for CompiledRealtimeLazyFrame {}
 unsafe impl Sync for CompiledRealtimeLazyFrame {}
 
@@ -32,6 +34,31 @@ impl CompiledRealtimeLazyFrame {
         lp_arena: &mut Arena<IR>,
         expr_arena: &mut Arena<AExpr>,
     ) -> PolarsResult<Self> {
+        // Lift pushed-down predicates out of placeholder scans into explicit
+        // Filter nodes so the compiled executor tree applies them correctly.
+        let nodes_with_predicates: Vec<_> = lp_arena
+            .iter(lp_top)
+            .filter_map(|(node, ir)| {
+                if placeholder_name_from_ir(ir).is_none() {
+                    return None;
+                }
+                if let IR::Scan { predicate: Some(pred), .. } = ir {
+                    Some((node, pred.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        for (node, pred) in nodes_with_predicates {
+            if let IR::Scan { predicate, .. } = lp_arena.get_mut(node) {
+                *predicate = None;
+            }
+            let clean_scan = lp_arena.get(node).clone();
+            let scan_node = lp_arena.add(clean_scan);
+            *lp_arena.get_mut(node) = IR::Filter { input: scan_node, predicate: pred };
+        }
+
         PLACEHOLDER_REGISTRY.with(|r| *r.borrow_mut() = Some(HashMap::new()));
 
         let physical_plan = create_physical_plan(
@@ -62,12 +89,9 @@ impl CompiledRealtimeLazyFrame {
             }
         }
 
-        // Lock the plan first so the slot-fill and execute are atomic with
-        // respect to other concurrent collect() callers on the same instance.
         let mut plan = self.physical_plan.lock().expect("executor mutex poisoned");
 
         for (name, slot) in &self.placeholder_slots {
-            // remove() moves the DataFrame into the slot — no Arc increment.
             *slot.lock().expect("placeholder slot poisoned") = inputs.remove(name);
         }
 

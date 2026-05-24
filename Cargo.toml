@@ -4,7 +4,7 @@ version = "0.0.1"
 edition = "2021"
 
 [lib]
-name = "rtlf"
+name = "_rtlf"
 crate-type = ["cdylib"]
 
 [dependencies]
@@ -12,14 +12,62 @@ pyo3 = { version = "0.27", features = ["extension-module"] }
 pyo3-polars = { version = "0.25", features = ["lazy", "derive"] }
 
 polars-buffer = { version = "0.52", default-features=false }
-polars-core = { version = "0.52", default-features=false, features = ["dtype-struct"] }
 polars-io = { version = "0.52", default-features=false, features = ["parquet"] }
-polars-plan = { version = "0.52", features = ["serde", "dtype-struct"] }
-polars-expr = { version = "0.52", default-features=false, features = ["dtype-struct"] }
+polars-core = { version = "0.52", default-features=false, features = [
+  "object",
+  "dtype-array", "dtype-categorical", "dtype-date", "dtype-datetime", "dtype-decimal",
+  "dtype-duration", "dtype-extension", "dtype-f16", "dtype-i128", "dtype-i16", "dtype-i8",
+  "dtype-struct", "dtype-time", "dtype-u128", "dtype-u16", "dtype-u8",
+] }
+polars-plan = { version = "0.52", default-features=false, features = [
+  "serde", "object",
+  "dtype-array", "dtype-categorical", "dtype-date", "dtype-datetime", "dtype-decimal",
+  "dtype-duration", "dtype-extension", "dtype-f16", "dtype-i128", "dtype-i16", "dtype-i8",
+  "dtype-struct", "dtype-time", "dtype-u128", "dtype-u16", "dtype-u8",
+] }
+polars-expr = { version = "0.52", default-features=false, features = ["dtype-full", "object"] }
+polars-ops = { version = "0.52", default-features=false, features = [
+  "object",
+  "dtype-array", "dtype-categorical", "dtype-date", "dtype-datetime", "dtype-decimal",
+  "dtype-duration", "dtype-extension", "dtype-f16", "dtype-i128", "dtype-i16", "dtype-i8",
+  "dtype-struct", "dtype-time", "dtype-u128", "dtype-u16", "dtype-u8",
+] }
 polars-mem-engine = { version = "0.52", default-features=false }
 polars-utils = { version = "0.52", default-features=false }
-polars-lazy = { version = "0.52", default-features=false, features = ["cse", "parquet", "new_streaming"] }
 polars-ffi = { version = "0.52", default-features = false }
+polars-stream = { version = "0.52", default-features = false }
+polars-lazy = { version = "0.52", default-features=false, features = [
+  "cse",
+  "nightly",
+  "new_streaming",
+  "dtype-full",
+  "object",
+  # IO formats
+  "parquet",
+  "ipc",
+  "csv",
+  "json",
+  # common ops
+  "temporal",
+  "strings",
+  "timezones",
+  "is_in",
+  "is_between",
+  "asof_join",
+  "cross_join",
+  "iejoin",
+  "repeat_by",
+  "round_series",
+  "true_div",
+  "trigonometry",
+  "sign",
+  "range",
+  "list_gather",
+  "list_filter",
+  "list_count",
+  "extract_jsonpath",
+  "find_many",
+]}
 
 [patch.crates-io]
 polars = { git = "https://github.com/pola-rs/polars", tag = "py-1.38.1" }

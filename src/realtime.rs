@@ -83,20 +83,32 @@ impl RealtimeLazyFrame {
         let mut expr_arena = self.expr_arena.clone();
 
         for (name, &node) in &self.placeholder_nodes {
-            // Extract schema before taking a mutable borrow.
-            let schema: SchemaRef = match lp_arena.get(node) {
-                IR::Scan { file_info, .. } => file_info.schema.clone(),
+            // Extract schema and predicate before taking a mutable borrow.
+            let (schema, predicate) = match lp_arena.get(node) {
+                IR::Scan { file_info, predicate, .. } => {
+                    (file_info.schema.clone(), predicate.clone())
+                },
                 _ => unreachable!("placeholder node was not IR::Scan"),
             };
-            *lp_arena.get_mut(node) = IR::DataFrameScan {
-                df: Arc::new(inputs.remove(name).expect("validated above")),
-                schema,
-                output_schema: None,
-            };
+            let df = Arc::new(inputs.remove(name).expect("validated above"));
+            let df_scan = IR::DataFrameScan { df, schema, output_schema: None };
+
+            if let Some(pred) = predicate {
+                // Predicate was pushed into the scan by the optimizer; restore it
+                // as an explicit Filter so it actually executes.
+                let scan_node = lp_arena.add(df_scan);
+                *lp_arena.get_mut(node) = IR::Filter { input: scan_node, predicate: pred };
+            } else {
+                *lp_arena.get_mut(node) = df_scan;
+            }
         }
 
-        let mut physical_plan =
-            create_physical_plan(self.lp_top, &mut lp_arena, &mut expr_arena, None)?;
+        let mut physical_plan = create_physical_plan(
+            self.lp_top,
+            &mut lp_arena,
+            &mut expr_arena,
+            Some(polars_stream::build_streaming_query_executor),
+        )?;
         physical_plan.execute(&mut ExecutionState::new())
     }
 
