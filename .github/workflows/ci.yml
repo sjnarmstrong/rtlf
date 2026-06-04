@@ -53,6 +53,11 @@ jobs:
           sccache: ${{ !matrix.platform.qemu }}
           manylinux: auto
           rust-toolchain: ${{ steps.toolchain.outputs.channel }}
+        env:
+          # manylinux2014 cross-toolchain's old gcc doesn't predefine __aarch64__
+          # when compiling .S files, so ring's asm_base.h fails its __ARM_ARCH check.
+          # Defining it explicitly via CFLAGS is the standard workaround.
+          CFLAGS_aarch64_unknown_linux_gnu: ${{ matrix.platform.qemu && '-D__ARM_ARCH=8' || '' }}
 
       - name: Test (native)
         if: "!matrix.platform.qemu"
