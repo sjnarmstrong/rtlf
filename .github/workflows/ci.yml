@@ -50,7 +50,7 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i python${{ matrix.python-version }}
-          sccache: true
+          sccache: ${{ !matrix.platform.qemu }}
           manylinux: auto
           rust-toolchain: ${{ steps.toolchain.outputs.channel }}
 
