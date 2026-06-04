@@ -82,7 +82,7 @@ def patch_cargo(cargo_path: Path, entry: dict) -> None:
     text = re.sub(r'(tag = )"py-[^"]+"', f'\\1"{polars_tag}"', text)
 
     cargo_path.write_text(text)
-    print(f"  Cargo.toml  → crates {crate_ver}, pyo3 {pyo3_ver}, pyo3-polars {pyo3_polars_ver}, tag {polars_tag}")
+    print(f"  Cargo.toml  -> crates {crate_ver}, pyo3 {pyo3_ver}, pyo3-polars {pyo3_polars_ver}, tag {polars_tag}")
 
 
 def patch_pyproject(pyproject_path: Path, entry: dict) -> None:
@@ -99,12 +99,12 @@ def patch_pyproject(pyproject_path: Path, entry: dict) -> None:
     )
 
     pyproject_path.write_text(text)
-    print(f"  pyproject   → rtlf {entry['rtlf']}, polars {entry['polars']}")
+    print(f"  pyproject   -> rtlf {entry['rtlf']}, polars {entry['polars']}")
 
 
 def patch_toolchain(toolchain_path: Path, entry: dict) -> None:
     toolchain_path.write_text(f'[toolchain]\nchannel = "{entry["nightly"]}"\n')
-    print(f"  toolchain   → {entry['nightly']}")
+    print(f"  toolchain   -> {entry['nightly']}")
 
 
 def main() -> None:
