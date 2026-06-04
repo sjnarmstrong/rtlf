@@ -1,0 +1,97 @@
+# Each entry maps a polars Python release to:
+#   rtlf        - the package version published to PyPI
+#   crate       - the polars-* crate semver (changes with minor polars releases)
+#   nightly     - the Rust nightly that matches the DSL_SCHEMA_HASH for this polars build
+#   pyo3        - pyo3 crate version used by this polars build
+#   pyo3_polars - pyo3-polars crate version used by this polars build
+#
+# Versioning scheme: rtlf 0.POLARS_MINOR.POLARS_PATCH
+# e.g. polars 1.38.1 → rtlf 0.38.1
+
+[[versions]]
+polars     = "1.38.0"
+rtlf       = "0.38.0"
+crate      = "0.52"
+nightly    = "nightly-2026-01-09"
+pyo3       = "0.27"
+pyo3_polars = "0.25"
+
+[[versions]]
+polars     = "1.38.1"
+rtlf       = "0.38.1"
+crate      = "0.52"
+nightly    = "nightly-2026-01-09"
+pyo3       = "0.27"
+pyo3_polars = "0.25"
+
+[[versions]]
+polars     = "1.39.0"
+rtlf       = "0.39.0"
+crate      = "0.53"
+nightly    = "nightly-2026-02-19"
+pyo3       = "0.27"
+pyo3_polars = "0.26"
+
+[[versions]]
+polars     = "1.39.1"
+rtlf       = "0.39.1"
+crate      = "0.53"
+nightly    = "nightly-2026-02-19"
+pyo3       = "0.27"
+pyo3_polars = "0.26"
+
+[[versions]]
+polars     = "1.39.2"
+rtlf       = "0.39.2"
+crate      = "0.53"
+nightly    = "nightly-2026-02-19"
+pyo3       = "0.27"
+pyo3_polars = "0.26"
+
+[[versions]]
+polars     = "1.39.3"
+rtlf       = "0.39.3"
+crate      = "0.53"
+nightly    = "nightly-2026-02-19"
+pyo3       = "0.27"
+pyo3_polars = "0.26"
+
+[[versions]]
+polars     = "1.40.0"
+rtlf       = "0.40.0"
+crate      = "0.53"
+nightly    = "nightly-2026-04-01"
+pyo3       = "0.28"
+pyo3_polars = "0.26"
+
+[[versions]]
+polars     = "1.40.1"
+rtlf       = "0.40.1"
+crate      = "0.53"
+nightly    = "nightly-2026-04-01"
+pyo3       = "0.28"
+pyo3_polars = "0.26"
+
+[[versions]]
+polars     = "1.41.0"
+rtlf       = "0.41.0"
+crate      = "0.53"
+nightly    = "nightly-2026-04-01"
+pyo3       = "0.28"
+pyo3_polars = "0.26"
+
+[[versions]]
+polars     = "1.41.1"
+rtlf       = "0.41.1"
+crate      = "0.53"
+nightly    = "nightly-2026-04-01"
+pyo3       = "0.28"
+pyo3_polars = "0.26"
+
+[[versions]]
+polars     = "1.41.2"
+rtlf       = "0.41.2"
+crate      = "0.53"
+nightly    = "nightly-2026-04-01"
+pyo3       = "0.28"
+pyo3_polars = "0.26"
