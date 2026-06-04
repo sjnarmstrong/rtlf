@@ -33,17 +33,20 @@ def find_entry(versions: dict, polars_version: str) -> dict:
     raise SystemExit(f"polars {polars_version!r} not in versions.toml. Available: {available}")
 
 
-# Features renamed between crate versions: {from_crate: {old_name: new_name}}
-# new_name=None means the feature was removed with no replacement.
-_FEATURE_RENAMES: dict[str, dict[str, str | None]] = {
-    "0.53": {"new_streaming": "streaming"},
-}
+# Feature renames keyed by the polars version they were introduced in.
+# Each entry: (since_polars, old_name, new_name)
+# configure.py normalises to old_name for versions before the cutoff and
+# new_name for versions at or after, so it is safe to run in either direction.
+_FEATURE_RENAMES: list[tuple[str, str, str]] = [
+    ("1.41.0", "new_streaming", "streaming"),
+]
 
 
 def patch_cargo(cargo_path: Path, entry: dict) -> None:
     text = cargo_path.read_text()
     crate_ver = entry["crate"]
-    polars_tag = f"py-{entry['polars']}"
+    polars_ver = entry["polars"]
+    polars_tag = f"py-{polars_ver}"
 
     # Update crate version numbers in [dependencies]
     # Anchored to line start so "pyo3-polars" (contains "polars") is not matched.
@@ -54,14 +57,14 @@ def patch_cargo(cargo_path: Path, entry: dict) -> None:
         text,
     )
 
-    # Apply feature renames accumulated up to and including crate_ver.
-    for version, renames in _FEATURE_RENAMES.items():
-        if crate_ver >= version:
-            for old, new in renames.items():
-                if new is None:
-                    text = re.sub(rf'"\b{re.escape(old)}\b",?\s*', "", text)
-                else:
-                    text = text.replace(f'"{old}"', f'"{new}"')
+    # Normalise feature names to match what this polars version expects.
+    # Replacing both names unconditionally is idempotent regardless of which
+    # direction configure was last run.
+    for since, old, new in _FEATURE_RENAMES:
+        if polars_ver >= since:
+            text = text.replace(f'"{old}"', f'"{new}"')
+        else:
+            text = text.replace(f'"{new}"', f'"{old}"')
 
     # Update pyo3 and pyo3-polars version constraints in [dependencies]
     pyo3_ver = entry["pyo3"]
