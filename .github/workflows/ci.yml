@@ -53,8 +53,6 @@ jobs:
           sccache: true
           manylinux: auto
           rust-toolchain: ${{ steps.toolchain.outputs.channel }}
-        env:
-          CFLAGS_aarch64_unknown_linux_gnu: "-march=armv8-a"
 
       - name: Test (native)
         if: "!matrix.platform.qemu"
