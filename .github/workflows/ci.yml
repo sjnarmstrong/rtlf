@@ -58,6 +58,8 @@ jobs:
           # when compiling .S files, so ring's asm_base.h fails its __ARM_ARCH check.
           # Defining it explicitly via CFLAGS is the standard workaround.
           CFLAGS_aarch64_unknown_linux_gnu: ${{ matrix.platform.qemu && '-D__ARM_ARCH=8' || '' }}
+          # fat LTO + QEMU emulation OOMs the 7GB runner; thin LTO uses far less memory.
+          CARGO_PROFILE_RELEASE_LTO: ${{ matrix.platform.qemu && 'thin' || 'fat' }}
 
       - name: Test (native)
         if: "!matrix.platform.qemu"
@@ -84,7 +86,6 @@ jobs:
   publish:
     name: Publish to PyPI
     needs: build-and-test
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
