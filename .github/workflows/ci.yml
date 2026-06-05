@@ -15,10 +15,10 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - {os: ubuntu-latest,  target: x86_64,               qemu: false}
-          - {os: ubuntu-latest,  target: aarch64,               qemu: true}
-          - {os: macos-latest,   target: aarch64-apple-darwin,  qemu: false}
-          - {os: windows-latest, target: x86_64-pc-windows-msvc, qemu: false}
+          - {os: ubuntu-latest,  target: x86_64,                qemu: false, sccache: true}
+          - {os: ubuntu-latest,  target: aarch64,               qemu: true,  sccache: false}
+          - {os: macos-latest,   target: aarch64-apple-darwin,  qemu: false, sccache: true}
+          - {os: windows-latest, target: x86_64-pc-windows-msvc, qemu: false, sccache: false}
         python-version: ["3.12", "3.13", "3.14"]
         polars-version:
           - "1.38.1"
@@ -50,7 +50,7 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i python${{ matrix.python-version }}
-          sccache: ${{ !matrix.platform.qemu }}
+          sccache: ${{ matrix.platform.sccache }}
           manylinux: auto
           rust-toolchain: ${{ steps.toolchain.outputs.channel }}
         env:
@@ -64,7 +64,7 @@ jobs:
         shell: bash
         run: |
           pip install "polars==${{ matrix.polars-version }}" pytest
-          pip install --find-links dist/ rtlf --force-reinstall --no-index
+          pip install dist/rtlf-*.whl
           pytest tests/ -v
 
       - name: Test (aarch64 via QEMU)
@@ -73,7 +73,7 @@ jobs:
           docker run --rm --platform linux/arm64 \
             -v "$GITHUB_WORKSPACE:/work" -w /work \
             python:${{ matrix.python-version }}-slim \
-            bash -c "pip install 'polars==${{ matrix.polars-version }}' pytest && pip install --find-links /work/dist/ rtlf --no-index && pytest tests/ -v"
+            bash -c "pip install 'polars==${{ matrix.polars-version }}' pytest && pip install /work/dist/rtlf-*.whl && pytest tests/ -v"
 
       # Only reached if tests pass
       - uses: actions/upload-artifact@v4
